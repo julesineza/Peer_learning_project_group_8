@@ -18,3 +18,6 @@ IMPORTANT:
     """)
     print("-" * 95)
     input("Press Enter to return to the main menu...")
+
+if __name__ == "__main__":
+    display_help()
