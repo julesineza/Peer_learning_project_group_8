@@ -21,7 +21,7 @@ def get_input():
             symptom = input(f"Enter your symptom #{count} (press q to quit): ").lower().strip()
             if symptom == "q":
                 break
-            if not symptom.isalpha() or len(symptom) < 3:
+            if not symptom.replace(" ", "").isalpha() or len(symptom) < 4:
                 print("Invalid symptom. Please enter alphabetic text with at least 3 characters.")
                 continue
             diagnosis.setdefault("symptoms", []).append(symptom)
