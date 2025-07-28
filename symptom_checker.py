@@ -3,56 +3,89 @@ from user_input import get_input, ask_followup
 import time
 
 class SymptomChecker:
+    def __init__(self,disease_db):
+        self.disease_db = disease_db
+        self.user_data = {}
+        self.result = {}
 
-    def find_possible_conditions(self, symptoms):
-        possible = {}
-        for disease, data in disease_db.items():
-            if any(sym in data['symptoms'] for sym in symptoms):
-                possible[disease] = data
-        return possible
+    def run(self):
+        print("\nWelcome to the Symptom Checker Tool!")
+        self.user_data = get_input()
+
+        if not self.user_data.get("symptoms"):
+            print("No symptoms entered. Exiting.")
+            return
+
+        candidates = self.match_symptoms(self.user_data["symptoms"])
+        candidates = self.narrow_down(candidates, self.user_data["symptoms"])
+
+        # Limit to top 2 diagnoses based on matched key symptoms
+        candidates = self.get_top_diagnoses(candidates, self.user_data["symptoms"])
+
+        self.result = candidates
+        self.show_result()
+
+    def match_symptoms(self, symptoms):
+        matched = {}
+        for disease, info in self.disease_db.items():
+            if any(symptom in info["symptoms"] for symptom in symptoms):
+                matched[disease] = info
+        return matched
 
     def narrow_down(self, candidates, known_symptoms):
+        question_limit = 6
+        followups_asked = 0
+
         for disease, data in list(candidates.items()):
             for symptom in data["symptoms"]:
                 if symptom not in known_symptoms:
-                    answer = ask_followup(symptom)
-                    while answer != 'y' and answer != 'n':
-                        print('Invalid input please enter y/n')
-                        answer=ask_followup(symptom)
+                    while True:
+                        answer = ask_followup(symptom)
+                        if answer not in ["y", "n"]:
+                            print("Please respond with 'y' for yes or 'n' for no.")
+                            continue
+                        break
+
+                    followups_asked += 1
+
                     if answer == "y":
                         known_symptoms.append(symptom)
-                    else:
-                        if symptom in data.get("key_symptoms", []):
-                            candidates.pop(disease)
-                            break
+                    elif symptom in data.get("key_symptoms", []):
+                        candidates.pop(disease)
+                        break
+
+                    if followups_asked >= question_limit:
+                        choice = input("Would you like to answer 2–3 more questions to improve accuracy? (y/n): ").strip().lower()
+                        if choice != "y":
+                            return candidates
+                        else:
+                            question_limit += 3
         return candidates
 
-    def show_result(self, matches):
-        if len(matches) == 1:
-            disease, info = next(iter(matches.items()))
-            print(f"\n>>> Most likely condition: {disease}")
-            print(f">>> Advice: {info['advice']}")
-            print(f">>> Source: {info['source']}")
-        elif len(matches) > 1:
-            print("\n>>> Multiple possible conditions:")
-            for disease in matches:
-                print(f"- {disease}")
-                
-            print("Please consult a healthcare provider for a proper diagnosis.")
-        else:
-            print(">>> No confident match found. Please monitor your symptoms or seek professional help.")
+    def get_top_diagnoses(self, candidates, user_symptoms, max_results=2):
+        scored = []
+        for disease, info in candidates.items():
+            key_syms = set(info.get("key_symptoms", []))
+            matched_syms = key_syms.intersection(set(user_symptoms))
+            score = len(matched_syms)
+            scored.append((disease, info, score))
 
-    def run(self):
-        user_data = get_input()
-        name = user_data["name"]
-        user_symptoms = user_data.get("symptoms", [])
+        scored.sort(key=lambda x: (-x[2], x[0]))  # Sort by score descending
 
-        if not user_symptoms:
-            print("No symptoms entered. Returning to menu...")
+        top = scored[:max_results]
+        return {disease: info for disease, info, _ in top}
+
+    def show_result(self):
+        if not self.result:
+            print("\nWe could not determine a condition based on your symptoms. Please consult a healthcare provider.")
             return
 
-        print("\nProcessing symptoms...\n")
-        possible_conditions = self.find_possible_conditions(user_symptoms)
-        final_diagnosis = self.narrow_down(possible_conditions, user_symptoms)
-        time.sleep(0.5)
-        self.show_result(final_diagnosis)        
+        print("\nPossible Diagnosis:")
+        print("-" * 60)
+        for disease, info in self.result.items():
+            print(f"Disease: {disease}")
+            print(f"Recommended Advice: {info.get('advice', 'No advice provided.')}")
+            print(f"Source: {info.get('source', 'N/A')}")
+            print("-" * 60)
+
+        print("Note: This is not a medical diagnosis. Please consult a professional for medical advice.")
