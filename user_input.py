@@ -1,4 +1,3 @@
-import json
 import time
 #1 Symptom input validation
 
