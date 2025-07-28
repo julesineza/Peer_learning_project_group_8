@@ -16,6 +16,9 @@ class SymptomChecker:
             for symptom in data["symptoms"]:
                 if symptom not in known_symptoms:
                     answer = ask_followup(symptom)
+                    while answer != 'y' and answer != 'n':
+                        print('Invalid input please enter y/n')
+                        answer=ask_followup(symptom)
                     if answer == "y":
                         known_symptoms.append(symptom)
                     else:

@@ -35,4 +35,4 @@ def get_input():
 
 
 def ask_followup(symptom):
-    return input(f"Do you also have '{symptom}'? (y/n): ").strip().lower()
+    return input(f"Do you also have '{symptom}'? (y/n): ").strip().lower()  
